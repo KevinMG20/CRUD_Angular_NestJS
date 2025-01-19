@@ -25,13 +25,15 @@ import { ProductoModule } from './producto/producto.module';
         database: configService.get<string>(DB_DATABASE),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
+
+        logging: false
       }),
       inject: [ConfigService],
     }),
 
 
-    ProductoModule
 
+    ProductoModule
   ],
   controllers: [AppController],
   providers: [AppService],
