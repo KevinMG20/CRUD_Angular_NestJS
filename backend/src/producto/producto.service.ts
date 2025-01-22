@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 // Importing TypeORM's InjectRepository decorator for injecting a repository
 import { ProductoRepository } from './producto.repository';
@@ -6,6 +6,7 @@ import { ProductoRepository } from './producto.repository';
 import { ProductoEntity } from './producto.entity';
 // Entity that represents the 'Producto' table in the database
 import { ProductoDTO } from './dto/producto.dto';
+import { MessageDto } from 'src/common/message.dto';
 // Data Transfer Object (DTO) for validating and structuring product data
 
 @Injectable()
@@ -25,7 +26,7 @@ export class ProductoService {
         // Fetches all records from the database
         if (!list.length) {
             // Throws an exception if the list is empty
-            throw new NotFoundException({ message: 'la lista esta vacia' });
+            throw new NotFoundException(new MessageDto('la lista esta vacia'));
         }
         return list;
         // Returns the list of products
@@ -37,7 +38,7 @@ export class ProductoService {
         // Finds a product by ID
         if (!producto) {
             // Throws an exception if no product is found
-            throw new NotFoundException({ message: 'el producto no existe' });
+            throw new NotFoundException(new MessageDto('el producto no existe'));
         }
         return producto;
         // Returns the found product
@@ -53,17 +54,25 @@ export class ProductoService {
 
     // Create a new product
     async create(dto: ProductoDTO): Promise<any> {
+        const exists = await this.findByNombre(dto.nombre);
+        if (exists) throw new BadRequestException(new MessageDto('ya hay un producto con ese nombre'));
         const producto = this.productoRepository.create(dto);
         // Creates a new product entity with the provided DTO
         await this.productoRepository.save(producto);
         // Saves the new product in the database
-        return { message: `producto ${producto.nombre} creado` };
+        return new MessageDto(`producto ${producto.nombre} creado`);
         // Returns a success message
     }
 
     // Update an existing product
     async update(id: number, dto: ProductoDTO): Promise<any> {
         const producto = await this.findById(id);
+        if (!producto) throw new BadRequestException(new MessageDto('ese producto no existe'));
+
+        const exists = await this.findByNombre(dto.nombre);
+        if (exists && exists.id !== id)
+            throw new BadRequestException(new MessageDto('ya hay otro producto con ese nombre'));
+
         // Finds the product by ID to ensure it exists
         dto.nombre ? producto.nombre = dto.nombre : producto.nombre = producto.nombre;
         // Updates the product's name if provided
@@ -72,7 +81,7 @@ export class ProductoService {
 
         await this.productoRepository.save(producto);
         // Saves the updated product in the database
-        return { message: `producto ${producto.nombre} actualizado` };
+        return new MessageDto(`producto ${producto.nombre} actualizado`);
         // Returns a success message
     }
 
@@ -82,7 +91,7 @@ export class ProductoService {
         // Finds the product by ID to ensure it exists
         await this.productoRepository.delete(producto);
         // Deletes the product from the database
-        return { message: `producto ${producto.nombre} eliminado` };
-        // Returns a success message
+        return new MessageDto(`producto ${producto.nombre} eliminado`);
+        // Returns a success message                                                                                
     }
 }
